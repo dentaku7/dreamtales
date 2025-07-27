@@ -10,7 +10,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "npm ci && npm run build:only",
-    "build:only": "react-scripts build && cp ../_headers ../_redirects build/",
+    "build:only": "react-scripts build && cp ../_headers build/",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
