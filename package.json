@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^4.21.2",
+    "openai": "^5.10.2"
+  },
+  "name": "dreamtales",
+  "version": "1.0.0",
+  "description": "A magical bedtime story chat app for children",
+  "main": "worker/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server/index.js",
+    "dev": "concurrently \"npm start\" \"cd client && npm start\"",
+    "build": "cd client && npm run build",
+    "deploy": "wrangler publish",
+    "dev:worker": "wrangler dev"
+  },
+  "keywords": ["bedtime", "stories", "children", "chat", "ai"],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "wrangler": "^3.0.0"
+  }
+}
