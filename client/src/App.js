@@ -10,6 +10,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(true);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -27,6 +28,38 @@ function App() {
     inputRef.current?.focus();
   }, []);
 
+  // Send initial welcome message
+  const sendWelcomeMessage = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: "Hello! I'd like to hear a bedtime story." }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setMessages(data.chatHistory);
+      setIsConnected(true);
+    } catch (error) {
+      console.error('Error sending welcome message:', error);
+      setError('Welcome message failed. You can still start typing to begin.');
+      setIsConnected(false);
+    } finally {
+      setIsLoading(false);
+      setHasInitialized(true);
+    }
+  };
+
   // Fetch chat history on component mount
   useEffect(() => {
     const fetchHistory = async () => {
@@ -36,17 +69,27 @@ function App() {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        setMessages(data);
+        
+        if (data.length === 0 && !hasInitialized) {
+          // No existing chat history, send welcome message
+          await sendWelcomeMessage();
+        } else {
+          setMessages(data);
+          setHasInitialized(true);
+        }
         setIsConnected(true);
       } catch (error) {
         console.error('Error fetching history:', error);
         setError('Failed to load chat history. You can still start a new conversation.');
         setIsConnected(false);
+        setHasInitialized(true);
       }
     };
 
-    fetchHistory();
-  }, []);
+    if (!hasInitialized) {
+      fetchHistory();
+    }
+  }, [hasInitialized]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -105,22 +148,30 @@ function App() {
     }
   };
 
-  const handleClear = async () => {
-    if (!window.confirm('Are you sure you want to clear all chat history?')) {
+  const handleNewStory = async () => {
+    if (!window.confirm('Are you sure you want to start a new story? This will clear the current conversation.')) {
       return;
     }
 
     try {
+      // Clear history on server
       const response = await fetch(`${API_BASE}/api/history`, { method: 'DELETE' });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
+      // Reset local state
       setMessages([]);
       setError(null);
       setIsConnected(true);
+      setHasInitialized(false);
+      
+      // Send new welcome message
+      await sendWelcomeMessage();
+      
     } catch (error) {
-      console.error('Error clearing history:', error);
-      setError('Failed to clear chat history.');
+      console.error('Error starting new story:', error);
+      setError('Failed to start new story. Try refreshing the page.');
       setIsConnected(false);
     }
   };
@@ -147,8 +198,8 @@ function App() {
             <span className="status-dot"></span>
             {isConnected ? 'Connected' : 'Offline'}
           </div>
-          <button onClick={handleClear} className="clear-button" title="Clear chat history">
-            🗑️ Clear
+          <button onClick={handleNewStory} className="new-story-button" title="Start a new story">
+            🌟 New Story
           </button>
         </div>
       </header>
@@ -169,17 +220,11 @@ function App() {
         )}
 
         <div className="messages" role="log" aria-live="polite">
-          {messages.length === 0 && !isLoading && (
+          {messages.length === 0 && !isLoading && hasInitialized && (
             <div className="welcome-message">
               <div className="welcome-content">
                 <h2>Welcome to DreamTales! 🌙</h2>
-                <p>I'm here to create magical bedtime stories just for you. Tell me:</p>
-                <ul>
-                  <li>Your name and age</li>
-                  <li>What you like (animals, adventures, etc.)</li>
-                  <li>How you're feeling today</li>
-                </ul>
-                <p>And I'll weave you a wonderful tale! ✨</p>
+                <p>Something went wrong with the welcome message. Please type "Hello" to get started!</p>
               </div>
             </div>
           )}
@@ -212,7 +257,9 @@ function App() {
                   <span></span>
                   <span></span>
                 </div>
-                <div className="message-text">Creating your story...</div>
+                <div className="message-text">
+                  {messages.length === 0 ? 'Preparing your magical welcome...' : 'Creating your story...'}
+                </div>
               </div>
             </div>
           )}

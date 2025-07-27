@@ -91,25 +91,29 @@ body {
   50% { opacity: 0.5; }
 }
 
-.clear-button {
-  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+.new-story-button {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
   color: white;
   border: none;
-  padding: 8px 12px;
+  padding: 8px 16px;
   border-radius: 20px;
   cursor: pointer;
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.clear-button:hover {
+.new-story-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
-.clear-button:active {
+.new-story-button:active {
   transform: translateY(0);
 }
 
