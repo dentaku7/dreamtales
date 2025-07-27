@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && cp _headers _redirects build/",
+    "build": "react-scripts build && cp ../_headers ../_redirects build/",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
