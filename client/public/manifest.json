@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "DreamTales",
+  "name": "✨ DreamTales - Magical Bedtime Stories",
+  "description": "AI-powered personalized bedtime stories for children ages 3-7. Create unique, therapeutic tales that help kids process emotions and learn valuable lessons.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +21,11 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#667eea",
+  "background_color": "#667eea",
+  "categories": ["entertainment", "education", "kids", "lifestyle"],
+  "lang": "en",
+  "scope": "/",
+  "prefer_related_applications": false
 }

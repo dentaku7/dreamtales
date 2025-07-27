@@ -1,0 +1,17 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="url(#bg)"/>
+  
+  <!-- Crescent moon -->
+  <path d="M13 6C9 6 6 9 6 13C6 17 9 20 13 20C15 20 17 19 18 17C16 18 14 17 13 15C12 13 12 11 13 9C14 7 16 6 18 7C17 6 15 6 13 6Z" fill="#fbbf24"/>
+  
+  <!-- Star -->
+  <path d="M23 10L24 12L26 12L24.5 13.5L25 16L23 15L21 16L21.5 13.5L20 12L22 12L23 10Z" fill="#fbbf24"/>
+</svg> 
