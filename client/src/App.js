@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
-// Get API base URL based on environment
-const API_BASE = process.env.NODE_ENV === 'production' 
-  ? 'https://dreamtales-worker.tux-spb.workers.dev' 
-  : '';
+// Get API base URL - with unified Workers, API routes are handled by the same worker
+const API_BASE = '';
 
 function App() {
   const [messages, setMessages] = useState([]);

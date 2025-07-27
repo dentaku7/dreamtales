@@ -1,5 +1,2 @@
-# API routes go to worker
-/api/* https://dreamtales-worker.tux-spb.workers.dev/api/:splat 200
-
 # Fallback for SPA routing
 /* /index.html 200 
