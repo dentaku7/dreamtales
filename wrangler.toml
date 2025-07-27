@@ -2,20 +2,24 @@ name = "dreamtales"
 main = "worker/index.js"
 compatibility_date = "2024-01-01"
 
-[env.production]
-name = "dreamtales-worker"
+# Static assets configuration (replaces Pages)
+[assets]
+directory = "client/build"
+not_found_handling = "single-page-application"
 
+# KV namespace for chat history
 [[kv_namespaces]]
 binding = "CHAT_HISTORY"
 id = "3b9edcfd503a4f8daf8940f2c1a87648"
 preview_id = "3b9edcfd503a4f8daf8940f2c1a87648"
 
+# Environment variables
 [vars]
 ENVIRONMENT = "production"
 
 # Build configuration
 [build]
-command = ""
+command = "cd client && npm ci && npm run build:only"
 
 # Repository information
 [triggers]
