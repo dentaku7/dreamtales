@@ -1,5 +1,5 @@
-# API routes go to worker (UPDATE THIS URL after deploying worker)
-/api/* https://dreamtales-worker.[YOUR_SUBDOMAIN].workers.dev/api/:splat 200
+# API routes go to worker
+/api/* https://dreamtales-worker.tux-spb.workers.dev/api/:splat 200
 
 # Fallback for SPA routing
 /* /index.html 200 

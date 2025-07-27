@@ -7,8 +7,8 @@ name = "dreamtales-worker"
 
 [[kv_namespaces]]
 binding = "CHAT_HISTORY"
-id = "your-kv-namespace-id"
-preview_id = "your-preview-kv-namespace-id"
+id = "3b9edcfd503a4f8daf8940f2c1a87648"
+preview_id = "3b9edcfd503a4f8daf8940f2c1a87648"
 
 [vars]
 ENVIRONMENT = "production"
