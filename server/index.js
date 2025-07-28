@@ -1,9 +1,14 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
-const { OpenAI } = require('openai');
-const PERSONA_PROMPT = require('./persona');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { OpenAI } from 'openai';
+import PERSONA_PROMPT from './persona.js';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -19,8 +24,10 @@ const openai = new OpenAI({
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the React app build directory
-app.use(express.static(path.join(__dirname, '../client/build')));
+// Only serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/build')));
+}
 
 // In-memory storage for chat history (in production, use a database)
 let chatHistory = [];
@@ -28,8 +35,8 @@ let chatHistory = [];
 // Default model
 const DEFAULT_MODEL = 'gpt-4o';
 
-// Endpoint to handle chat messages
-app.post('/chat', async (req, res) => {
+// API Routes with /api prefix
+app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
     
@@ -61,20 +68,22 @@ app.post('/chat', async (req, res) => {
 });
 
 // Endpoint to get chat history
-app.get('/history', (req, res) => {
+app.get('/api/history', (req, res) => {
   res.json(chatHistory);
 });
 
 // Endpoint to clear chat history
-app.delete('/history', (req, res) => {
+app.delete('/api/history', (req, res) => {
   chatHistory = [];
   res.json({ message: 'Chat history cleared' });
 });
 
-// For any other route, serve the React app
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/build/index.html'));
-});
+// For production, serve the React app for any other route
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/build/index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './App.css';
 
-// Get API base URL - with unified Workers, API routes are handled by the same worker
-const API_BASE = '';
+// Get API base URL - point to backend server in dev, same origin in production
+const API_BASE = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001';
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -187,30 +186,43 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <div className="header-content">
-          <h1>✨ DreamTales</h1>
-          <p className="subtitle">Your magical bedtime story companion</p>
+    <div className="h-screen flex flex-col bg-transparent">
+      {/* Header */}
+      <header className="glass-effect px-5 py-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
+        <div className="flex flex-col items-start">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent m-0">
+            ✨ DreamTales
+          </h1>
+          <p className="text-gray-600 text-sm mt-1 m-0">Your magical bedtime story companion</p>
         </div>
-        <div className="header-actions">
-          <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-            <span className="status-dot"></span>
+        <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded-full bg-black/5 ${
+            isConnected ? 'text-green-600' : 'text-red-500'
+          }`}>
+            <span className={`w-2 h-2 rounded-full animate-pulse-glow ${
+              isConnected ? 'bg-green-500' : 'bg-red-500'
+            }`}></span>
             {isConnected ? 'Connected' : 'Offline'}
           </div>
-          <button onClick={handleNewStory} className="new-story-button" title="Start a new story">
+          <button 
+            onClick={handleNewStory} 
+            className="btn-secondary text-sm"
+            title="Start a new story"
+          >
             🌟 New Story
           </button>
         </div>
       </header>
 
-      <div className="chat-container">
+      {/* Chat Container */}
+      <div className="flex-1 flex flex-col p-5 overflow-hidden max-w-4xl mx-auto w-full">
+        {/* Error Message */}
         {error && (
-          <div className="error-message">
-            <span className="error-icon">⚠️</span>
+          <div className="flex items-center gap-2 text-red-600 glass-effect p-3 rounded-xl mb-4 text-sm shadow-lg">
+            <span className="text-lg">⚠️</span>
             {error}
             <button 
-              className="error-dismiss" 
+              className="ml-auto text-red-600 hover:opacity-70 transition-opacity p-0 bg-none border-none text-xl cursor-pointer"
               onClick={() => setError(null)}
               aria-label="Dismiss error"
             >
@@ -219,12 +231,17 @@ function App() {
           </div>
         )}
 
-        <div className="messages" role="log" aria-live="polite">
+        {/* Messages */}
+        <div 
+          className="flex-1 overflow-y-auto mb-5 p-5 glass-effect rounded-2xl shadow-lg scrollbar-thin scrollbar-thumb-primary-300 scrollbar-track-transparent"
+          role="log" 
+          aria-live="polite"
+        >
           {messages.length === 0 && !isLoading && hasInitialized && (
-            <div className="welcome-message">
-              <div className="welcome-content">
-                <h2>Welcome to DreamTales! 🌙</h2>
-                <p>Something went wrong with the welcome message. Please type "Hello" to get started!</p>
+            <div className="text-center py-10 text-gray-600">
+              <div>
+                <h2 className="text-xl text-gray-800 mb-4">Welcome to DreamTales! 🌙</h2>
+                <p className="mb-4 leading-relaxed">Something went wrong with the welcome message. Please type "Hello" to get started!</p>
               </div>
             </div>
           )}
@@ -232,16 +249,28 @@ function App() {
           {messages.map((msg, index) => (
             <div 
               key={index} 
-              className={`message ${msg.role} ${msg.isError ? 'error' : ''}`}
+              className={`flex gap-3 my-4 animate-slide-in ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
-              <div className="message-avatar">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg ${
+                msg.role === 'user' 
+                  ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' 
+                  : 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white'
+              }`}>
                 {msg.role === 'user' ? '👤' : '🌟'}
               </div>
-              <div className="message-content">
-                <div className="message-text">
+              <div className="flex-1 max-w-[calc(100%-60px)]">
+                <div className={`p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                  msg.role === 'user'
+                    ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white'
+                    : msg.isError
+                    ? 'bg-red-50 border border-red-200 text-red-700'
+                    : 'bg-gray-50/80'
+                }`}>
                   {formatMessage(msg.content)}
                 </div>
-                <div className="message-time">
+                <div className={`text-xs text-gray-500 mt-1 ${
+                  msg.role === 'user' ? 'text-left' : 'text-right'
+                }`}>
                   {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
@@ -249,16 +278,20 @@ function App() {
           ))}
 
           {isLoading && (
-            <div className="message assistant">
-              <div className="message-avatar">🌟</div>
-              <div className="message-content">
-                <div className="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <div className="message-text">
-                  {messages.length === 0 ? 'Preparing your magical welcome...' : 'Creating your story...'}
+            <div className="flex gap-3 my-4">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 text-white flex items-center justify-center text-xl flex-shrink-0 shadow-lg">
+                🌟
+              </div>
+              <div className="flex-1">
+                <div className="p-3 bg-gray-50/80 rounded-2xl">
+                  <div className="flex gap-1 p-3 mb-2">
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '0s'}}></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {messages.length === 0 ? 'Preparing your magical welcome...' : 'Creating your story...'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -267,25 +300,26 @@ function App() {
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={handleSubmit} className="input-form">
-          <div className="input-container">
+        {/* Input Form */}
+        <form onSubmit={handleSubmit} className="flex gap-3 glass-effect p-4 rounded-2xl shadow-lg">
+          <div className="flex-1 relative">
             <input
               ref={inputRef}
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Tell me about yourself or ask for a story..."
-              className="input-field"
+              className="w-full p-3 border-2 border-primary-200 rounded-2xl text-base bg-white transition-all focus:outline-none focus:border-primary-500 focus:ring-3 focus:ring-primary-100 disabled:bg-gray-100 disabled:text-gray-500"
               disabled={isLoading}
               maxLength={2000}
             />
-            <div className="char-counter">
+            <div className="absolute right-3 -bottom-5 text-xs text-gray-500">
               {inputValue.length}/2000
             </div>
           </div>
           <button 
             type="submit" 
-            className="send-button" 
+            className="btn-primary min-w-[56px] text-xl disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
             disabled={isLoading || !inputValue.trim()}
             aria-label="Send message"
           >

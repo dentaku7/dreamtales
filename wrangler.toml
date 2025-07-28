@@ -1,13 +1,15 @@
 name = "dreamtales"
 main = "worker/index.js"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
 
-# Static assets configuration (replaces Pages)
+# Static assets configuration (for Cloudflare Git deployment)
 [assets]
 directory = "client/build"
 not_found_handling = "single-page-application"
+binding = "ASSETS"
 
-# KV namespace for chat history
+# KV namespace for chat history (managed via Cloudflare dashboard)
 [[kv_namespaces]]
 binding = "CHAT_HISTORY"
 id = "3b9edcfd503a4f8daf8940f2c1a87648"
@@ -17,10 +19,9 @@ preview_id = "3b9edcfd503a4f8daf8940f2c1a87648"
 [vars]
 ENVIRONMENT = "production"
 
-# Build configuration
+# Build configuration for Cloudflare's CI/CD
 [build]
 command = "cd client && npm ci && npm run build:only"
 
-# Repository information
-[triggers]
-crons = [] 
+# Enable preview URLs for testing
+preview_urls = true 
