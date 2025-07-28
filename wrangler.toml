@@ -18,6 +18,12 @@ binding = "CHAT_HISTORY"
 id = "3b9edcfd503a4f8daf8940f2c1a87648"
 preview_id = "3b9edcfd503a4f8daf8940f2c1a87648"
 
+# KV namespace for configuration data (managed via Cloudflare dashboard)
+[[kv_namespaces]]
+binding = "CONFIG"
+id = "99c6af77c41041c8b7fcc8ed7e59685f"
+preview_id = "99c6af77c41041c8b7fcc8ed7e59685f"
+
 # Environment variables
 [vars]
 ENVIRONMENT = "production"
