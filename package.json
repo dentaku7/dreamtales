@@ -27,6 +27,9 @@
   "author": "",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
     "concurrently": "^9.2.0",
     "wrangler": "^4.26.0"
