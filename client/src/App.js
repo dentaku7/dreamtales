@@ -10,8 +10,120 @@ function App() {
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(true);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
+  const [masterPrompt, setMasterPrompt] = useState('');
+  const [originalPrompt, setOriginalPrompt] = useState('');
+  const [isCustomPrompt, setIsCustomPrompt] = useState(false);
+  const [promptLoading, setPromptLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Load master prompt
+  const loadMasterPrompt = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/prompt`);
+      if (!response.ok) {
+        throw new Error('Failed to load master prompt');
+      }
+      const data = await response.json();
+      setMasterPrompt(data.prompt);
+      setOriginalPrompt(data.prompt);
+      setIsCustomPrompt(data.isCustom);
+    } catch (error) {
+      console.error('Error loading master prompt:', error);
+      setError('Failed to load prompt settings');
+    }
+  };
+
+  // Save master prompt
+  const saveMasterPrompt = async () => {
+    if (promptLoading) return;
+    
+    setPromptLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/prompt`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: masterPrompt }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to save prompt');
+      }
+
+      const data = await response.json();
+      setOriginalPrompt(data.prompt);
+      setIsCustomPrompt(true);
+      setShowPromptEditor(false);
+      
+      // Clear chat history and start fresh with new prompt
+      await handleNewStory();
+      
+      // Success message
+      setError(null);
+      // You could add a success toast here if you want
+    } catch (error) {
+      console.error('Error saving master prompt:', error);
+      setError(error.message);
+    } finally {
+      setPromptLoading(false);
+    }
+  };
+
+  // Reset master prompt to default
+  const resetMasterPrompt = async () => {
+    if (promptLoading) return;
+    
+    setPromptLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/prompt`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to reset prompt');
+      }
+
+      const data = await response.json();
+      setMasterPrompt(data.prompt);
+      setOriginalPrompt(data.prompt);
+      setIsCustomPrompt(false);
+      setShowPromptEditor(false);
+      
+      // Clear chat history and start fresh with default prompt
+      await handleNewStory();
+    } catch (error) {
+      console.error('Error resetting master prompt:', error);
+      setError(error.message);
+    } finally {
+      setPromptLoading(false);
+    }
+  };
+
+  // Open prompt editor
+  const openPromptEditor = () => {
+    setMasterPrompt(originalPrompt);
+    setShowPromptEditor(true);
+  };
+
+  // Close prompt editor
+  const closePromptEditor = () => {
+    setMasterPrompt(originalPrompt);
+    setShowPromptEditor(false);
+  };
+
+  // Load master prompt on component mount
+  useEffect(() => {
+    loadMasterPrompt();
+  }, []);
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -205,6 +317,17 @@ function App() {
             {isConnected ? 'Connected' : 'Offline'}
           </div>
           <button 
+            onClick={openPromptEditor} 
+            className={`flex items-center gap-2 text-xs px-3 py-2 rounded-full transition-all shadow-lg ${
+              isCustomPrompt 
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600' 
+                : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
+            }`}
+            title={isCustomPrompt ? "Custom prompt active - Click to edit" : "Using default prompt - Click to customize"}
+          >
+            ⚙️ {isCustomPrompt ? 'Custom' : 'Default'}
+          </button>
+          <button 
             onClick={handleNewStory} 
             className="btn-secondary text-sm"
             title="Start a new story"
@@ -327,6 +450,112 @@ function App() {
           </button>
         </form>
       </div>
+
+      {/* Prompt Editor Modal */}
+      {showPromptEditor && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="glass-effect max-w-4xl w-full max-h-[90vh] flex flex-col rounded-2xl shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/20">
+              <div>
+                <h2 className="text-xl font-bold bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">
+                  ⚙️ Master Prompt Editor
+                </h2>
+                <p className="text-gray-600 text-sm mt-1">
+                  {isCustomPrompt ? 'Editing custom prompt' : 'Customize the AI assistant behavior'} 
+                  • Changes will start a new chat
+                </p>
+              </div>
+              <button
+                onClick={closePromptEditor}
+                className="text-gray-500 hover:text-gray-700 transition-colors text-2xl p-2"
+                title="Close editor"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 p-6 overflow-y-auto">
+              <div className="space-y-4">
+                {/* Character Count */}
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-medium text-gray-700">
+                    Prompt Content:
+                  </label>
+                  <div className={`text-xs px-2 py-1 rounded-full ${
+                    masterPrompt.length > 10000 
+                      ? 'bg-red-100 text-red-600' 
+                      : masterPrompt.length > 8000 
+                      ? 'bg-yellow-100 text-yellow-600' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {masterPrompt.length.toLocaleString()}/10,000 characters
+                  </div>
+                </div>
+
+                {/* Textarea */}
+                <textarea
+                  value={masterPrompt}
+                  onChange={(e) => setMasterPrompt(e.target.value)}
+                  className="w-full h-96 p-4 border-2 border-gray-200 rounded-xl text-sm bg-white resize-none transition-all focus:outline-none focus:border-primary-500 focus:ring-3 focus:ring-primary-100"
+                  placeholder="Enter your custom prompt here..."
+                  disabled={promptLoading}
+                />
+
+                {/* Info */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">💡 Tips:</h4>
+                  <ul className="text-xs text-blue-700 space-y-1">
+                    <li>• Use clear, specific instructions for the AI behavior</li>
+                    <li>• Include context about the app purpose and target audience</li>
+                    <li>• Test changes in a new chat to see how they affect responses</li>
+                    <li>• You can reset to default anytime if needed</li>
+                  </ul>
+                </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                    ⚠️ {error}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-white/20 gap-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={resetMasterPrompt}
+                  disabled={promptLoading || !isCustomPrompt}
+                  className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
+                  title="Reset to default prompt"
+                >
+                  {promptLoading ? '⏳' : '🔄'} Reset to Default
+                </button>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={closePromptEditor}
+                  disabled={promptLoading}
+                  className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg disabled:opacity-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveMasterPrompt}
+                  disabled={promptLoading || masterPrompt.length === 0 || masterPrompt.length > 10000 || masterPrompt === originalPrompt}
+                  className="btn-primary text-sm disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                >
+                  {promptLoading ? '⏳ Saving...' : '💾 Save & Apply'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -17,12 +17,18 @@
     "deploy": "wrangler publish",
     "dev:worker": "wrangler dev"
   },
-  "keywords": ["bedtime", "stories", "children", "chat", "ai"],
+  "keywords": [
+    "bedtime",
+    "stories",
+    "children",
+    "chat",
+    "ai"
+  ],
   "author": "",
   "license": "MIT",
   "type": "module",
   "devDependencies": {
     "concurrently": "^9.2.0",
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.26.0"
   }
 }

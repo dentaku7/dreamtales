@@ -136,6 +136,39 @@ function generateSessionId(request) {
   return btoa(`${ip}:${userAgent}`).slice(0, 16);
 }
 
+// Get master prompt from KV or fallback to default
+async function getMasterPrompt(env) {
+  try {
+    const customPrompt = await env.CHAT_HISTORY.get('master_prompt');
+    return customPrompt || PERSONA_PROMPT;
+  } catch (error) {
+    console.error('Error retrieving master prompt:', error);
+    return PERSONA_PROMPT;
+  }
+}
+
+// Save master prompt to KV
+async function saveMasterPrompt(prompt, env) {
+  try {
+    await env.CHAT_HISTORY.put('master_prompt', prompt);
+    return true;
+  } catch (error) {
+    console.error('Error saving master prompt:', error);
+    return false;
+  }
+}
+
+// Reset to default prompt
+async function resetMasterPrompt(env) {
+  try {
+    await env.CHAT_HISTORY.delete('master_prompt');
+    return true;
+  } catch (error) {
+    console.error('Error resetting master prompt:', error);
+    return false;
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -171,9 +204,12 @@ export default {
         // Add user message
         chatHistory.push({ role: 'user', content: validatedMessage });
         
+        // Get current master prompt (custom or default)
+        const currentPrompt = await getMasterPrompt(env);
+        
         // Prepare messages for OpenAI
         const messages = [
-          { role: 'system', content: PERSONA_PROMPT },
+          { role: 'system', content: currentPrompt },
           ...chatHistory
         ];
         
@@ -227,6 +263,59 @@ export default {
         await env.CHAT_HISTORY.delete(`chat:${sessionId}`);
         
         return new Response(JSON.stringify({ message: 'Chat history cleared' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+        
+      } else if (url.pathname === '/api/prompt' && request.method === 'GET') {
+        // Get current master prompt
+        const currentPrompt = await getMasterPrompt(env);
+        const isCustom = await env.CHAT_HISTORY.get('master_prompt') !== null;
+        
+        return new Response(JSON.stringify({ 
+          prompt: currentPrompt,
+          isCustom: isCustom,
+          defaultPrompt: PERSONA_PROMPT
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+        
+      } else if (url.pathname === '/api/prompt' && request.method === 'PUT') {
+        // Update master prompt
+        const { prompt } = await request.json();
+        
+        if (!prompt || typeof prompt !== 'string') {
+          throw new Error('Prompt is required and must be a string');
+        }
+        
+        if (prompt.length > 10000) {
+          throw new Error('Prompt too long. Please keep it under 10,000 characters.');
+        }
+        
+        const success = await saveMasterPrompt(prompt.trim(), env);
+        
+        if (!success) {
+          throw new Error('Failed to save prompt');
+        }
+        
+        return new Response(JSON.stringify({ 
+          message: 'Master prompt updated successfully',
+          prompt: prompt.trim()
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+        
+      } else if (url.pathname === '/api/prompt' && request.method === 'DELETE') {
+        // Reset to default prompt
+        const success = await resetMasterPrompt(env);
+        
+        if (!success) {
+          throw new Error('Failed to reset prompt');
+        }
+        
+        return new Response(JSON.stringify({ 
+          message: 'Master prompt reset to default',
+          prompt: PERSONA_PROMPT
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
         

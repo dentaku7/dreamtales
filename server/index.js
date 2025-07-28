@@ -32,8 +32,16 @@ if (process.env.NODE_ENV === 'production') {
 // In-memory storage for chat history (in production, use a database)
 let chatHistory = [];
 
+// In-memory storage for custom master prompt (in production, use KV storage)
+let customMasterPrompt = null;
+
 // Default model
 const DEFAULT_MODEL = 'gpt-4o';
+
+// Get current master prompt (custom or default)
+function getCurrentMasterPrompt() {
+  return customMasterPrompt || PERSONA_PROMPT;
+}
 
 // API Routes with /api prefix
 app.post('/api/chat', async (req, res) => {
@@ -43,9 +51,12 @@ app.post('/api/chat', async (req, res) => {
     // Add user message to history
     chatHistory.push({ role: 'user', content: message });
     
+    // Get current master prompt (custom or default)
+    const currentPrompt = getCurrentMasterPrompt();
+    
     // Prepare messages for OpenAI API
     const messages = [
-      { role: 'system', content: PERSONA_PROMPT },
+      { role: 'system', content: currentPrompt },
       ...chatHistory
     ];
     
@@ -67,21 +78,73 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Endpoint to get chat history
+// Get chat history
 app.get('/api/history', (req, res) => {
   res.json(chatHistory);
 });
 
-// Endpoint to clear chat history
+// Clear chat history
 app.delete('/api/history', (req, res) => {
   chatHistory = [];
   res.json({ message: 'Chat history cleared' });
 });
 
-// For production, serve the React app for any other route
+// Get current master prompt
+app.get('/api/prompt', (req, res) => {
+  const currentPrompt = getCurrentMasterPrompt();
+  const isCustom = customMasterPrompt !== null;
+  
+  res.json({
+    prompt: currentPrompt,
+    isCustom: isCustom,
+    defaultPrompt: PERSONA_PROMPT
+  });
+});
+
+// Update master prompt
+app.put('/api/prompt', (req, res) => {
+  try {
+    const { prompt } = req.body;
+    
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'Prompt is required and must be a string' });
+    }
+    
+    if (prompt.length > 10000) {
+      return res.status(400).json({ error: 'Prompt too long. Please keep it under 10,000 characters.' });
+    }
+    
+    customMasterPrompt = prompt.trim();
+    
+    res.json({
+      message: 'Master prompt updated successfully',
+      prompt: customMasterPrompt
+    });
+  } catch (error) {
+    console.error('Error updating master prompt:', error);
+    res.status(500).json({ error: 'Failed to update prompt' });
+  }
+});
+
+// Reset master prompt to default
+app.delete('/api/prompt', (req, res) => {
+  try {
+    customMasterPrompt = null;
+    
+    res.json({
+      message: 'Master prompt reset to default',
+      prompt: PERSONA_PROMPT
+    });
+  } catch (error) {
+    console.error('Error resetting master prompt:', error);
+    res.status(500).json({ error: 'Failed to reset prompt' });
+  }
+});
+
+// Serve React app (only in production)
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build/index.html'));
+    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
   });
 }
 
