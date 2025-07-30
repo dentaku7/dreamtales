@@ -1,23 +1,26 @@
 # Project Brief
 
 ## Project Overview
-DreamTales is a web-based storytelling platform that enables users to create, share, and explore interactive narratives. The application combines modern web technologies with creative writing tools to provide an engaging user experience.
+DreamTales is an AI-powered bedtime story chat application designed for children ages 3-7. Using OpenAI's GPT models, it creates personalized, therapeutic bedtime stories that help children process emotions, learn valuable lessons, and transition to sleep in a calming, engaging way.
 
 ## Core Requirements
-1. User authentication system (login/registration)
-2. Story creation and editing interface
-3. Interactive story viewing experience
-4. Social sharing and collaboration features
-5. Responsive design for cross-device compatibility
+1. **AI Chat System**: Real-time conversation with OpenAI integration for story generation
+2. **URL-based Sessions**: Each chat has unique URLs for easy session management
+3. **Master Prompt Management**: Configurable AI behavior for different storytelling approaches
+4. **Chat Persistence**: Session history stored and retrievable via chat IDs
+5. **Responsive Design**: Works seamlessly on tablets and phones for bedtime use
+6. **Rate Limiting**: Protects against abuse while allowing natural conversation flow
 
 ## Goals
-- Create an intuitive interface for writers to craft interactive stories
-- Implement a robust backend to handle user data and story storage
-- Ensure high performance and scalability
-- Provide collaborative features for story development
+- Create a magical, therapeutic bedtime experience for children
+- Provide parents with a reliable, age-appropriate storytelling companion
+- Ensure conversations feel natural and engaging, not robotic
+- Build a scalable system that can handle multiple simultaneous chats
+- Maintain child safety through content filtering and appropriate responses
 
 ## Constraints
-- Must support modern web browsers
-- Should be deployable via Cloudflare Workers
-- Needs to integrate with Tailwind CSS for styling
-- Must follow accessibility best practices
+- **Child Safety**: All content must be age-appropriate and therapeutic
+- **Performance**: Response times under 3 seconds for good conversation flow
+- **Deployment**: Must run on Cloudflare Workers for global edge performance
+- **Accessibility**: Clear, readable interface suitable for children and tired parents
+- **Cost Control**: Rate limiting and efficient API usage to control OpenAI costs

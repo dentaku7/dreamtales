@@ -1,22 +1,25 @@
 # Product Context
 
 ## Purpose
-DreamTales exists to empower writers and creators to build interactive narratives that engage audiences through dynamic storytelling experiences. The platform bridges the gap between traditional writing and modern web interactivity.
+DreamTales is a magical bedtime story companion that creates personalized, therapeutic tales for children ages 3-7. The AI-powered chat application helps children process emotions, learn valuable lessons, and wind down for sleep through engaging, age-appropriate stories.
 
 ## Problems Solved
-1. Lack of accessible tools for creating interactive web-based stories
-2. Difficulty in sharing and collaborating on narrative projects
-3. Limited engagement options for readers beyond passive consumption
-4. Need for a centralized platform that combines writing tools with audience interaction
+1. **Bedtime Struggles**: Parents need engaging content to help children transition to sleep
+2. **Emotional Processing**: Children need safe ways to explore feelings and situations
+3. **Personalization Gap**: Generic stories don't connect with individual children's experiences
+4. **Educational Opportunity**: Bedtime can be a teaching moment wrapped in entertainment
+5. **Consistency Challenge**: Parents want reliable, quality storytelling when tired themselves
 
 ## How It Works
-1. Writers create stories using a visual editor with branching path capabilities
-2. Readers interact with stories through clickable choices that influence narrative outcomes
-3. Collaborative features allow multiple authors to work on interconnected story elements
-4. Social sharing enables stories to be embedded or linked across platforms
+1. **Interactive Chat**: Children (with parent guidance) chat with the AI companion
+2. **Personalized Stories**: AI creates unique tales based on child's input and interests
+3. **Therapeutic Elements**: Stories gently address emotions, fears, and learning opportunities
+4. **Session Continuity**: Each chat has a unique URL for easy return to conversations
+5. **Customizable Prompts**: Parents/caregivers can adjust the AI's storytelling approach
 
 ## User Experience Goals
-- Writers should be able to create complex narrative structures without technical barriers
-- Readers should experience seamless transitions between story paths
-- Collaboration tools should feel intuitive and enhance creative synergy
-- The platform should maintain performance even with complex, large-scale narratives
+- **Children** should feel heard and engaged with stories that reflect their world
+- **Parents** should trust the content is appropriate and beneficial for their child
+- **Conversations** should flow naturally and feel magical, not robotic
+- **Stories** should be calming and help transition to sleep rather than energizing
+- **Interface** should be simple enough for children to navigate with minimal help

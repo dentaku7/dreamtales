@@ -31,21 +31,23 @@ DreamTales follows a three-tier architecture pattern:
 
 ## Component Relationships
 1. **Client-Server Communication**:
-   - API endpoints in server/index.js handle data requests
-   - Worker functions manage background tasks like story processing
-   - Client components consume API endpoints via fetch calls
+   - API endpoints in server/index.js handle local development requests
+   - Worker functions handle production chat processing and persistence
+   - Client components consume API endpoints via fetch calls with environment detection
 
 2. **Routing Structure**:
-   - React Router for client-side navigation
-   - Server routes map to worker functions for data persistence
-   - Public routes vs authenticated routes pattern
+   - React Router with BrowserRouter for client-side navigation
+   - Routes: `/` → `/chat`, `/chat/:chatId` → specific chat loading
+   - Worker handles client-side routing fallback for production static assets
+   - ChatWrapper generates/redirects to chat IDs, Chat component handles conversations
 
 ## Critical Implementation Paths
-1. **User Authentication Flow**:
-   - Login form → API validation → Session management → Protected routes
+1. **Chat Session Flow**:
+   - URL access → ChatWrapper → Chat ID validation → Chat history loading → AI conversation
 
-2. **Story Creation Process**:
-   - Editor component → Branching path validation → API save → Worker processing
+2. **Message Processing**:
+   - User input → Client validation → API call with chat ID → OpenAI processing → Response with updated history
 
-3. **Collaboration Workflow**:
-   - Real-time updates → Conflict resolution → Version history → Sync mechanism
+3. **URL Management**:
+   - Base URL → Redirect to new chat ID → Chat component mounts → History loads → Ready for conversation
+   - New story → Generate new chat ID → Navigate to new URL → Fresh chat state

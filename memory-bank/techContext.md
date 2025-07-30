@@ -21,16 +21,17 @@
 
 ## Development Setup
 1. **Environment Requirements**:
-   - Node.js v20.x (specified in .node-version)
-   - npm (package-lock.json indicates npm usage)
-   - Cloudflare Wrangler CLI (wrangler.toml configuration)
+   - Node.js v20.x (specified in package.json engines)
+   - npm (for package management)
+   - OpenAI API key (for chat functionality)
+   - Cloudflare Wrangler CLI (for production deployment)
 
 2. **Project Structure**:
-   - client/ - React frontend with Tailwind CSS
-   - server/ - Express API server
-   - worker/ - Cloudflare Worker functions
-   - public/ - Static assets
-   - src/ - Core React components
+   - client/ - React frontend with Tailwind CSS and React Router
+   - server/ - Express API server for local development  
+   - worker/ - Cloudflare Worker for production
+   - memory-bank/ - Project documentation and context
+   - .env file - Local environment configuration (OPENAI_API_KEY, MASTER_PROMPT)
 
 ## Technical Constraints
 1. **Cloudflare Workers Limitations**:
@@ -45,15 +46,15 @@
 ## Dependencies
 1. **Frontend Dependencies**:
    - React, ReactDOM
-   - React Router DOM
-   - Tailwind CSS
-   - Axios for API calls
+   - React Router DOM (for URL routing)
+   - Tailwind CSS (for styling)
+   - Native fetch for API calls
 
 2. **Backend Dependencies**:
-   - Express
-   - JWT for authentication
-   - Body-parser
-   - CORS middleware
+   - Express (local development server)
+   - OpenAI SDK (for AI chat functionality)
+   - CORS middleware (for cross-origin requests)
+   - dotenv (for environment configuration)
 
 ## Tool Usage Patterns
 1. **Build Process**:
