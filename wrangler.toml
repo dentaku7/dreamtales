@@ -28,6 +28,5 @@ preview_id = "99c6af77c41041c8b7fcc8ed7e59685f"
 [vars]
 ENVIRONMENT = "production"
 
-# Build configuration for Cloudflare's CI/CD
-[build]
-command = "cd client && npm ci && npm run build:only" 
+# Build handled by Cloudflare's Git integration via package.json build script
+# No custom build command needed 
