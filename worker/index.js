@@ -119,9 +119,45 @@ async function deleteMasterPrompt(env) {
   }
 }
 
+// Basic Auth check
+function checkBasicAuth(request) {
+  const authorization = request.headers.get('Authorization');
+  
+  if (!authorization) {
+    return false;
+  }
+  
+  const [scheme, credentials] = authorization.split(' ');
+  
+  if (scheme !== 'Basic' || !credentials) {
+    return false;
+  }
+  
+  const decoded = atob(credentials);
+  const [username, password] = decoded.split(':');
+  
+  // Change these credentials as needed
+  return username === 'dev' && password === 'dreamtales2025';
+}
+
+function unauthorizedResponse() {
+  return new Response('Authentication required', {
+    status: 401,
+    headers: {
+      'WWW-Authenticate': 'Basic realm="DreamTales Dev Access"',
+      'Content-Type': 'text/plain'
+    }
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    
+    // Check basic auth for all requests (except CORS preflight)
+    if (request.method !== 'OPTIONS' && !checkBasicAuth(request)) {
+      return unauthorizedResponse();
+    }
     
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
