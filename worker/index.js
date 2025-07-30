@@ -60,15 +60,15 @@ function getClientIP(request) {
 }
 
 // Get chat history from KV
-async function getChatHistory(sessionId, env) {
-  const key = `chat:${sessionId}`;
+async function getChatHistory(chatId, env) {
+  const key = `chat:${chatId}`;
   const stored = await env.CHAT_HISTORY.get(key);
   return stored ? JSON.parse(stored) : [];
 }
 
 // Save chat history to KV
-async function saveChatHistory(sessionId, history, env) {
-  const key = `chat:${sessionId}`;
+async function saveChatHistory(chatId, history, env) {
+  const key = `chat:${chatId}`;
   // Keep only last 50 messages to avoid storage limits
   const trimmed = history.slice(-50);
   await env.CHAT_HISTORY.put(key, JSON.stringify(trimmed), {
@@ -77,10 +77,10 @@ async function saveChatHistory(sessionId, history, env) {
 }
 
 // Generate session ID from IP and user agent
-function generateSessionId(request) {
+function generateSessionId(request, chatId = null) {
   const ip = getClientIP(request);
   const userAgent = request.headers.get('User-Agent') || '';
-  return btoa(`${ip}:${userAgent}`).slice(0, 16);
+  return chatId ? chatId : btoa(`${ip}:${userAgent}`).slice(0, 16);
 }
 
 // Get master prompt from CONFIG KV (required, no fallback)
@@ -125,7 +125,7 @@ export default {
     
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Rate limiting
@@ -142,8 +142,8 @@ export default {
 
     try {
       if (url.pathname === '/api/chat' && request.method === 'POST') {
-        const { message } = await request.json();
-        const sessionId = generateSessionId(request);
+        const { message, chatId } = await request.json();
+        const sessionId = generateSessionId(request, chatId);
         
         // Validate input
         const validatedMessage = validateMessage(message);
@@ -195,13 +195,15 @@ export default {
         
         return new Response(JSON.stringify({ 
           response, 
-          chatHistory: chatHistory.slice(-20) // Return last 20 messages
+          chatHistory: chatHistory.slice(-20), // Return last 20 messages
+          chatId: sessionId // Return the chat ID for client-side routing
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
         
       } else if (url.pathname === '/api/history' && request.method === 'GET') {
-        const sessionId = generateSessionId(request);
+        const chatId = url.searchParams.get('chatId');
+        const sessionId = generateSessionId(request, chatId);
         const chatHistory = await getChatHistory(sessionId, env);
         
         return new Response(JSON.stringify(chatHistory.slice(-20)), {
@@ -209,7 +211,8 @@ export default {
         });
         
       } else if (url.pathname === '/api/history' && request.method === 'DELETE') {
-        const sessionId = generateSessionId(request);
+        const chatId = url.searchParams.get('chatId');
+        const sessionId = generateSessionId(request, chatId);
         await env.CHAT_HISTORY.delete(`chat:${sessionId}`);
         
         return new Response(JSON.stringify({ message: 'Chat history cleared' }), {
@@ -266,10 +269,20 @@ export default {
         });
         
       } else {
-        return new Response('Not Found', { 
-          status: 404,
-          headers: corsHeaders 
-        });
+        // Handle static assets and React Router client-side routing
+        // For any non-API route, serve the React app (index.html)
+        // This allows React Router to handle client-side routing
+        const request_url = new URL(request.url);
+        
+        // If it's a static asset request (js, css, images, etc.), pass it through
+        if (request_url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+          return env.ASSETS.fetch(request);
+        }
+        
+        // For all other routes (including /chat, /chat/:id), serve the React app
+        // React Router will handle the routing on the client side
+        const indexRequest = new Request(new URL('/', request.url), request);
+        return env.ASSETS.fetch(indexRequest);
       }
       
     } catch (error) {
@@ -282,4 +295,4 @@ export default {
       });
     }
   },
-}; 
+};

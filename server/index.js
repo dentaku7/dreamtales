@@ -4,8 +4,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { OpenAI } from 'openai';
-import PERSONA_PROMPT from './persona.js';
-
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,9 +36,18 @@ let customMasterPrompt = null;
 // Default model
 const DEFAULT_MODEL = 'gpt-4o';
 
-// Get current master prompt (custom or default)
-function getCurrentMasterPrompt() {
-  return customMasterPrompt || PERSONA_PROMPT;
+// Get current master prompt - use custom or env variable
+async function getCurrentMasterPrompt() {
+  if (customMasterPrompt) {
+    return customMasterPrompt;
+  }
+  
+  const envPrompt = process.env.MASTER_PROMPT;
+  if (envPrompt) {
+    return envPrompt;
+  }
+  
+  throw new Error('Master prompt not configured. Please set MASTER_PROMPT in .env or configure via the UI.');
 }
 
 // API Routes with /api prefix
@@ -52,7 +59,7 @@ app.post('/api/chat', async (req, res) => {
     chatHistory.push({ role: 'user', content: message });
     
     // Get current master prompt (custom or default)
-    const currentPrompt = getCurrentMasterPrompt();
+    const currentPrompt = await getCurrentMasterPrompt();
     
     // Prepare messages for OpenAI API
     const messages = [
@@ -90,15 +97,19 @@ app.delete('/api/history', (req, res) => {
 });
 
 // Get current master prompt
-app.get('/api/prompt', (req, res) => {
-  const currentPrompt = getCurrentMasterPrompt();
-  const isCustom = customMasterPrompt !== null;
-  
-  res.json({
-    prompt: currentPrompt,
-    isCustom: isCustom,
-    defaultPrompt: PERSONA_PROMPT
-  });
+app.get('/api/prompt', async (req, res) => {
+  try {
+    const currentPrompt = await getCurrentMasterPrompt();
+    const isCustom = customMasterPrompt !== null;
+    
+    res.json({
+      prompt: currentPrompt,
+      isCustom: isCustom
+    });
+  } catch (error) {
+    console.error('Error getting master prompt:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Update master prompt
@@ -126,18 +137,17 @@ app.put('/api/prompt', (req, res) => {
   }
 });
 
-// Reset master prompt to default
+// Delete master prompt
 app.delete('/api/prompt', (req, res) => {
   try {
     customMasterPrompt = null;
     
     res.json({
-      message: 'Master prompt reset to default',
-      prompt: PERSONA_PROMPT
+      message: 'Master prompt deleted successfully'
     });
   } catch (error) {
-    console.error('Error resetting master prompt:', error);
-    res.status(500).json({ error: 'Failed to reset prompt' });
+    console.error('Error deleting master prompt:', error);
+    res.status(500).json({ error: 'Failed to delete prompt' });
   }
 });
 
