@@ -2,14 +2,14 @@
 
 ## What Works
 1. **Core Chat System**: Full bedtime story chat functionality with OpenAI integration
-2. **URL Routing System**: React Router implementation with proper chat ID management
+2. **Routing**: React Router with a single `/chat` route
 3. **Master Prompt Management**: Configurable prompts via UI or environment variables
 4. **Development Environment**: Client and server running concurrently with hot reload
-5. **Chat Persistence**: KV storage for chat history with 7-day expiration
+5. **Chat Persistence**: Single KV key for chat history with 7-day expiration
 6. **Responsive UI**: Tailwind CSS implementation with glass morphism effects
 7. **Error Handling**: Comprehensive error states and user feedback
 8. **Rate Limiting**: 20 requests/minute protection via Cloudflare Workers
-9. **Auto-routing**: Base URLs redirect to new chats, specific URLs load chat history
+9. **Auto-routing**: Base URL redirects to `/chat`
 10. **Environment Configuration**: Easy local setup with .env file
 
 ## What's Left to Build

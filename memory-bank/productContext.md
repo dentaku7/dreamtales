@@ -14,7 +14,7 @@ DreamTales is a magical bedtime story companion that creates personalized, thera
 1. **Interactive Chat**: Children (with parent guidance) chat with the AI companion
 2. **Personalized Stories**: AI creates unique tales based on child's input and interests
 3. **Therapeutic Elements**: Stories gently address emotions, fears, and learning opportunities
-4. **Session Continuity**: Each chat has a unique URL for easy return to conversations
+4. **Session Continuity**: Single ongoing conversation per user restored automatically on return
 5. **Customizable Prompts**: Parents/caregivers can adjust the AI's storytelling approach
 
 ## User Experience Goals

@@ -1,15 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 // Get API base URL - point to backend server in dev, same origin in production
 const API_BASE = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001';
 
-// Generate a unique chat ID
-function generateChatId() {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
-}
-
-function Chat({ chatId }) {
+function Chat() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,7 +17,6 @@ function Chat({ chatId }) {
   const [promptLoading, setPromptLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-  const navigate = useNavigate();
 
   // Load master prompt
   const loadMasterPrompt = async () => {
@@ -157,7 +150,7 @@ function Chat({ chatId }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: "Hello! I'd like to hear a bedtime story.", chatId }),
+        body: JSON.stringify({ message: "Hello! I'd like to hear a bedtime story." }),
       });
 
       if (!response.ok) {
@@ -176,18 +169,13 @@ function Chat({ chatId }) {
       setIsLoading(false);
       setHasInitialized(true);
     }
-  }, [chatId]);
+  }, []);
 
-  // Fetch chat history on component mount and when chatId changes
+  // Fetch chat history on component mount
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const url = new URL(`${API_BASE}/api/history`, window.location.origin);
-        if (chatId) {
-          url.searchParams.append('chatId', chatId);
-        }
-        
-        const response = await fetch(url.toString());
+        const response = await fetch(`${API_BASE}/api/history`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -209,13 +197,10 @@ function Chat({ chatId }) {
       }
     };
 
-    // Reset state when chatId changes
-    setMessages([]);
-    setHasInitialized(false);
-    setError(null);
-    
-    fetchHistory();
-  }, [chatId, sendWelcomeMessage]);
+    if (!hasInitialized) {
+      fetchHistory();
+    }
+  }, [hasInitialized, sendWelcomeMessage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -242,7 +227,7 @@ function Chat({ chatId }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: userMessage, chatId }),
+        body: JSON.stringify({ message: userMessage }),
       });
 
       if (!response.ok) {
@@ -280,20 +265,18 @@ function Chat({ chatId }) {
     }
 
     try {
-      const url = new URL(`${API_BASE}/api/history`, window.location.origin);
-      if (chatId) {
-        url.searchParams.append('chatId', chatId);
-      }
-      
       // Clear history on server
-      const response = await fetch(url.toString(), { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/api/history`, { method: 'DELETE' });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      // Generate new chat ID and navigate to it
-      const newChatId = generateChatId();
-      navigate(`/chat/${newChatId}`, { replace: true });
+      // Reset local state and send welcome message
+      setMessages([]);
+      setError(null);
+      setIsConnected(true);
+      setHasInitialized(false);
+      await sendWelcomeMessage();
       
     } catch (error) {
       console.error('Error starting new story:', error);

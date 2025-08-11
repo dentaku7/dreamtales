@@ -1,36 +1,30 @@
 # Active Context
 
 ## Current Work Focus
-Completed proper chat URL routing system implementation
+Remove URL-based chat IDs; simplify to single-user session with persisted history
 
 ## Recent Changes
-1. Implemented React Router for client-side routing with ChatWrapper and Chat components
-2. Refactored App.js to handle routing via Routes instead of direct chat rendering
-3. Added automatic chat ID generation and URL redirection for base URLs
-4. Implemented URL-based chat history loading for specific chat IDs
-5. Updated New Story and prompt editing to create new chat IDs and update URLs
-6. Removed share button since URL always reflects current chat state
-7. Updated worker to handle client-side routing for React Router
-8. Fixed server to handle master prompt from env or UI configuration
-9. Added MASTER_PROMPT to env.example for easier local development
-10. Fixed infinite loop in chat history fetching by removing hasInitialized from useEffect dependencies
+1. Simplified routing to a single `/chat` route
+2. Removed `ChatWrapper` and all `chatId` URL logic
+3. Client no longer sends `chatId`; history endpoints use a single key
+4. Worker now persists to a single KV key (`chat:default`)
+5. Preserved master prompt editing and welcome message flow
 
 ## Next Steps
-1. Continue with planned authentication system implementation
-2. Enhanced UI/UX improvements
-3. Story personalization features
+1. Enhanced UI/UX improvements
+2. Story personalization features
 
 ## Active Decisions
-1. Using React Router for proper client-side routing instead of manual URL manipulation
-2. Chat IDs generated using random strings + timestamp for uniqueness
-3. URLs automatically reflect current chat state - no separate sharing needed
+1. Use simple client-side routing (`/chat`) without session IDs
+2. Single persisted chat history (no multi-session management)
+3. Master prompt loaded from KV in production, env variable in development
 4. Master prompt loaded from KV in production, env variable in development
 5. Server architecture mirrors worker architecture for consistency
 
 ## Important Patterns
-1. **URL Structure**: `/` → redirects to `/chat/{newId}`, `/chat/{id}` → loads specific chat
-2. **State Management**: useEffect with chatId dependency for history loading
-3. **Component Hierarchy**: App → Routes → ChatWrapper → Chat
+1. **URL Structure**: `/` → redirects to `/chat`
+2. **State Management**: initialization guarded by `hasInitialized`
+3. **Component Hierarchy**: App → Routes → Chat
 4. **Error Handling**: React Router handles invalid URLs with fallback redirects
 5. **Development Setup**: npm run dev starts both client and server concurrently
 

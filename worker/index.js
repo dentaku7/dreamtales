@@ -59,28 +59,22 @@ function getClientIP(request) {
          'unknown';
 }
 
+// Single-user chat key
+const CHAT_KEY = 'chat:default';
+
 // Get chat history from KV
-async function getChatHistory(chatId, env) {
-  const key = `chat:${chatId}`;
-  const stored = await env.CHAT_HISTORY.get(key);
+async function getChatHistory(env) {
+  const stored = await env.CHAT_HISTORY.get(CHAT_KEY);
   return stored ? JSON.parse(stored) : [];
 }
 
 // Save chat history to KV
-async function saveChatHistory(chatId, history, env) {
-  const key = `chat:${chatId}`;
+async function saveChatHistory(history, env) {
   // Keep only last 50 messages to avoid storage limits
   const trimmed = history.slice(-50);
-  await env.CHAT_HISTORY.put(key, JSON.stringify(trimmed), {
+  await env.CHAT_HISTORY.put(CHAT_KEY, JSON.stringify(trimmed), {
     expirationTtl: 86400 * 7 // 7 days
   });
-}
-
-// Generate session ID from IP and user agent
-function generateSessionId(request, chatId = null) {
-  const ip = getClientIP(request);
-  const userAgent = request.headers.get('User-Agent') || '';
-  return chatId ? chatId : btoa(`${ip}:${userAgent}`).slice(0, 16);
 }
 
 // Get master prompt from CONFIG KV (required, no fallback)
@@ -178,14 +172,13 @@ export default {
 
     try {
       if (url.pathname === '/api/chat' && request.method === 'POST') {
-        const { message, chatId } = await request.json();
-        const sessionId = generateSessionId(request, chatId);
+        const { message } = await request.json();
         
         // Validate input
         const validatedMessage = validateMessage(message);
         
         // Get chat history
-        const chatHistory = await getChatHistory(sessionId, env);
+        const chatHistory = await getChatHistory(env);
         
         // Add user message
         chatHistory.push({ role: 'user', content: validatedMessage });
@@ -227,29 +220,24 @@ export default {
         chatHistory.push({ role: 'assistant', content: response });
         
         // Save updated history
-        await saveChatHistory(sessionId, chatHistory, env);
+        await saveChatHistory(chatHistory, env);
         
         return new Response(JSON.stringify({ 
           response, 
-          chatHistory: chatHistory.slice(-20), // Return last 20 messages
-          chatId: sessionId // Return the chat ID for client-side routing
+          chatHistory: chatHistory.slice(-20) // Return last 20 messages
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
         
       } else if (url.pathname === '/api/history' && request.method === 'GET') {
-        const chatId = url.searchParams.get('chatId');
-        const sessionId = generateSessionId(request, chatId);
-        const chatHistory = await getChatHistory(sessionId, env);
+        const chatHistory = await getChatHistory(env);
         
         return new Response(JSON.stringify(chatHistory.slice(-20)), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
         
       } else if (url.pathname === '/api/history' && request.method === 'DELETE') {
-        const chatId = url.searchParams.get('chatId');
-        const sessionId = generateSessionId(request, chatId);
-        await env.CHAT_HISTORY.delete(`chat:${sessionId}`);
+        await env.CHAT_HISTORY.delete(CHAT_KEY);
         
         return new Response(JSON.stringify({ message: 'Chat history cleared' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }

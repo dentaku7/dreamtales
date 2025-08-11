@@ -37,17 +37,17 @@ DreamTales follows a three-tier architecture pattern:
 
 2. **Routing Structure**:
    - React Router with BrowserRouter for client-side navigation
-   - Routes: `/` → `/chat`, `/chat/:chatId` → specific chat loading
+   - Routes: `/` → `/chat`
    - Worker handles client-side routing fallback for production static assets
-   - ChatWrapper generates/redirects to chat IDs, Chat component handles conversations
+   - Chat component handles conversations directly
 
 ## Critical Implementation Paths
 1. **Chat Session Flow**:
-   - URL access → ChatWrapper → Chat ID validation → Chat history loading → AI conversation
+   - URL access → Chat → Chat history loading → AI conversation
 
 2. **Message Processing**:
    - User input → Client validation → API call with chat ID → OpenAI processing → Response with updated history
 
 3. **URL Management**:
-   - Base URL → Redirect to new chat ID → Chat component mounts → History loads → Ready for conversation
-   - New story → Generate new chat ID → Navigate to new URL → Fresh chat state
+   - Base URL → Redirect to `/chat` → Chat component mounts → History loads → Ready for conversation
+   - New story → Clear history → Send new welcome message

@@ -5,9 +5,8 @@ DreamTales is an AI-powered bedtime story chat application designed for children
 
 ## Core Requirements
 1. **AI Chat System**: Real-time conversation with OpenAI integration for story generation
-2. **URL-based Sessions**: Each chat has unique URLs for easy session management
-3. **Master Prompt Management**: Configurable AI behavior for different storytelling approaches
-4. **Chat Persistence**: Session history stored and retrievable via chat IDs
+2. **Master Prompt Management**: Configurable AI behavior for different storytelling approaches
+3. **Chat Persistence**: Single-user chat history persisted and restored on next visit
 5. **Responsive Design**: Works seamlessly on tablets and phones for bedtime use
 6. **Rate Limiting**: Protects against abuse while allowing natural conversation flow
 
