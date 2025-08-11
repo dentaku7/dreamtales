@@ -20,7 +20,7 @@ function Chat({ mode = 'child' }) {
   const inputRef = useRef(null);
 
   // Load master prompt
-  const loadMasterPrompt = async () => {
+  const loadMasterPrompt = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE}/api/prompt?mode=${mode}`);
       if (!response.ok) {
@@ -34,7 +34,7 @@ function Chat({ mode = 'child' }) {
       console.error('Error loading master prompt:', error);
       setError('Failed to load prompt settings');
     }
-  };
+  }, [mode]);
 
   // Save master prompt
   const saveMasterPrompt = async () => {
@@ -121,10 +121,10 @@ function Chat({ mode = 'child' }) {
     setShowPromptEditor(false);
   };
 
-  // Load master prompt on component mount or mode change
+  // Load master prompt on component mount or when loader changes
   useEffect(() => {
     loadMasterPrompt();
-  }, [mode]);
+  }, [loadMasterPrompt]);
 
   // Load parent data banner (child mode only)
   useEffect(() => {
@@ -194,7 +194,7 @@ function Chat({ mode = 'child' }) {
       setIsLoading(false);
       setHasInitialized(true);
     }
-  }, []);
+  }, [mode]);
 
   // Fetch chat history on component mount
   useEffect(() => {
