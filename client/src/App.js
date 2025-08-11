@@ -9,7 +9,8 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/chat" replace />} />
-      <Route path="/chat" element={<Chat />} />
+      <Route path="/chat" element={<Chat mode="child" />} />
+      <Route path="/parents" element={<Chat mode="parent" />} />
       <Route path="*" element={<Navigate to="/chat" replace />} />
     </Routes>
   );

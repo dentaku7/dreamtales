@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 // Get API base URL - point to backend server in dev, same origin in production
 const API_BASE = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001';
 
-function Chat() {
+function Chat({ mode = 'child' }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -15,13 +15,14 @@ function Chat() {
   const [originalPrompt, setOriginalPrompt] = useState('');
   const [isCustomPrompt, setIsCustomPrompt] = useState(false);
   const [promptLoading, setPromptLoading] = useState(false);
+  const [parentData, setParentData] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
   // Load master prompt
   const loadMasterPrompt = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/prompt`);
+      const response = await fetch(`${API_BASE}/api/prompt?mode=${mode}`);
       if (!response.ok) {
         throw new Error('Failed to load master prompt');
       }
@@ -120,10 +121,33 @@ function Chat() {
     setShowPromptEditor(false);
   };
 
-  // Load master prompt on component mount
+  // Load master prompt on component mount or mode change
   useEffect(() => {
     loadMasterPrompt();
-  }, []);
+  }, [mode]);
+
+  // Load parent data banner (child mode only)
+  useEffect(() => {
+    const fetchParentData = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/parent-data`);
+        if (res.ok) {
+          const data = await res.json();
+          setParentData(data);
+        }
+      } catch {}
+    };
+    if (mode === 'child') {
+      fetchParentData();
+    }
+  }, [mode, messages.length]);
+
+  const clearParentData = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/parent-data`, { method: 'DELETE' });
+      if (res.ok) setParentData(null);
+    } catch {}
+  };
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -145,7 +169,8 @@ function Chat() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/chat`, {
+      const response = await fetch(`${API_BASE}/api/chat?mode=${mode}`,
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -175,7 +200,7 @@ function Chat() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/history`);
+        const response = await fetch(`${API_BASE}/api/history?mode=${mode}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -200,7 +225,7 @@ function Chat() {
     if (!hasInitialized) {
       fetchHistory();
     }
-  }, [hasInitialized, sendWelcomeMessage]);
+  }, [hasInitialized, sendWelcomeMessage, mode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -222,7 +247,8 @@ function Chat() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/chat`, {
+      const response = await fetch(`${API_BASE}/api/chat?mode=${mode}`,
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -266,7 +292,7 @@ function Chat() {
 
     try {
       // Clear history on server
-      const response = await fetch(`${API_BASE}/api/history`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/api/history?mode=${mode}`, { method: 'DELETE' });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -303,7 +329,7 @@ function Chat() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent m-0">
             ✨ DreamTales
           </h1>
-          <p className="text-gray-600 text-sm mt-1 m-0">Your magical bedtime story companion</p>
+          <p className="text-gray-600 text-sm mt-1 m-0">{mode === 'parent' ? 'Parents Chat' : 'Your magical bedtime story companion'}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded-full bg-black/5 ${
@@ -325,6 +351,8 @@ function Chat() {
           >
             ⚙️ {isCustomPrompt ? 'Custom' : 'Default'}
           </button>
+          <a href="/chat" className={`text-sm px-3 py-2 rounded-full ${mode === 'child' ? 'bg-primary-100 text-primary-700' : 'bg-black/5 text-gray-700'}`}>Child</a>
+          <a href="/parents" className={`text-sm px-3 py-2 rounded-full ${mode === 'parent' ? 'bg-primary-100 text-primary-700' : 'bg-black/5 text-gray-700'}`}>Parents</a>
           <button 
             onClick={handleNewStory} 
             className="btn-secondary text-sm"
@@ -358,6 +386,12 @@ function Chat() {
           role="log" 
           aria-live="polite"
         >
+          {mode === 'child' && parentData && (
+            <div className="mb-3 p-3 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm flex items-center gap-2">
+              <span>Parent guidance set. Applied on New Story.</span>
+              <button onClick={clearParentData} className="ml-auto text-yellow-800 underline">Clear</button>
+            </div>
+          )}
           {messages.length === 0 && !isLoading && hasInitialized && (
             <div className="text-center py-10 text-gray-600">
               <div>
@@ -429,7 +463,7 @@ function Chat() {
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Tell me about yourself or ask for a story..."
+              placeholder={mode === 'parent' ? 'Describe the situation and desired outcome...' : 'Tell me about yourself or ask for a story...'}
               className="w-full p-3 border-2 border-primary-200 rounded-2xl text-base bg-white transition-all focus:outline-none focus:border-primary-500 focus:ring-3 focus:ring-primary-100 disabled:bg-gray-100 disabled:text-gray-500"
               disabled={isLoading}
               maxLength={2000}

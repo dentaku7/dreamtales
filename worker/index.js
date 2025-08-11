@@ -62,39 +62,59 @@ function getClientIP(request) {
 // Single-user chat key
 const CHAT_KEY = 'chat:default';
 
-// Get chat history from KV
-async function getChatHistory(env) {
-  const stored = await env.CHAT_HISTORY.get(CHAT_KEY);
+// Parent data block key
+const PARENT_DATA_KEY = 'parent_data:block';
+
+// Get chat history from KV by key
+async function getChatHistory(env, key) {
+  const stored = await env.CHAT_HISTORY.get(key);
   return stored ? JSON.parse(stored) : [];
 }
 
-// Save chat history to KV
-async function saveChatHistory(history, env) {
+// Save chat history to KV by key
+async function saveChatHistory(history, env, key) {
   // Keep only last 50 messages to avoid storage limits
   const trimmed = history.slice(-50);
-  await env.CHAT_HISTORY.put(CHAT_KEY, JSON.stringify(trimmed), {
+  await env.CHAT_HISTORY.put(key, JSON.stringify(trimmed), {
     expirationTtl: 86400 * 7 // 7 days
   });
 }
 
-// Get master prompt from CONFIG KV (required, no fallback)
-async function getMasterPrompt(env) {
+// Get master prompt from CONFIG KV per mode
+async function getMasterPrompt(env, mode = 'child') {
   try {
-    const masterPrompt = await env.CONFIG.get('master_prompt');
-    if (!masterPrompt) {
-      throw new Error('Master prompt not configured. Please set a master prompt before using the app.');
+    if (mode === 'child') {
+      let childPrompt = await env.CONFIG.get('master_prompt_child');
+      if (!childPrompt) {
+        const legacy = await env.CONFIG.get('master_prompt');
+        if (legacy) {
+          await env.CONFIG.put('master_prompt_child', legacy);
+          childPrompt = legacy;
+        }
+      }
+      if (!childPrompt) {
+        throw new Error('Master prompt (child) not configured. Please set a master prompt before using the app.');
+      }
+      return childPrompt;
+    } else {
+      let parentPrompt = await env.CONFIG.get('master_prompt_parent');
+      if (!parentPrompt) {
+        parentPrompt = `You are a helpful parenting assistant.\nYour goal is to guide the parent to produce a single structured block that summarizes the situation and the intended lesson for the child.\nAsk clarifying questions as needed, but when ready, output EXACTLY one block using this exact format:\n\n<PARENT_INPUT>\nCore issue: a short description of the conflict or concern\nLesson to be taught to the child: a clear thought to be delivered to the child\n</PARENT_INPUT>\n\nDo not include additional commentary inside the block. Keep the block concise.`;
+        await env.CONFIG.put('master_prompt_parent', parentPrompt);
+      }
+      return parentPrompt;
     }
-    return masterPrompt;
   } catch (error) {
     console.error('Error retrieving master prompt:', error);
     throw error;
   }
 }
 
-// Save master prompt to CONFIG KV
-async function saveMasterPrompt(prompt, env) {
+// Save master prompt to CONFIG KV per mode
+async function saveMasterPrompt(prompt, env, mode = 'child') {
   try {
-    await env.CONFIG.put('master_prompt', prompt);
+    const key = mode === 'parent' ? 'master_prompt_parent' : 'master_prompt_child';
+    await env.CONFIG.put(key, prompt);
     return true;
   } catch (error) {
     console.error('Error saving master prompt:', error);
@@ -102,15 +122,32 @@ async function saveMasterPrompt(prompt, env) {
   }
 }
 
-// Delete master prompt from CONFIG KV
-async function deleteMasterPrompt(env) {
+// Delete master prompt from CONFIG KV per mode
+async function deleteMasterPrompt(env, mode = 'child') {
   try {
-    await env.CONFIG.delete('master_prompt');
+    const key = mode === 'parent' ? 'master_prompt_parent' : 'master_prompt_child';
+    await env.CONFIG.delete(key);
     return true;
   } catch (error) {
     console.error('Error deleting master prompt:', error);
     return false;
   }
+}
+
+// Parent data helpers
+async function getParentData(env) {
+  const stored = await env.CONFIG.get(PARENT_DATA_KEY);
+  return stored ? JSON.parse(stored) : null;
+}
+
+async function saveParentData(block, env) {
+  const payload = { block, updatedAt: new Date().toISOString() };
+  await env.CONFIG.put(PARENT_DATA_KEY, JSON.stringify(payload));
+  return payload;
+}
+
+async function deleteParentData(env) {
+  await env.CONFIG.delete(PARENT_DATA_KEY);
 }
 
 // Basic Auth check
@@ -173,18 +210,28 @@ export default {
     try {
       if (url.pathname === '/api/chat' && request.method === 'POST') {
         const { message } = await request.json();
+        const mode = url.searchParams.get('mode') === 'parent' ? 'parent' : 'child';
         
         // Validate input
         const validatedMessage = validateMessage(message);
         
-        // Get chat history
-        const chatHistory = await getChatHistory(env);
+        // Get chat history by mode
+        const chatKey = mode === 'parent' ? 'chat:parents' : 'chat:child';
+        const chatHistory = await getChatHistory(env, chatKey);
         
         // Add user message
         chatHistory.push({ role: 'user', content: validatedMessage });
         
-        // Get current master prompt (custom or default)
-        const currentPrompt = await getMasterPrompt(env);
+        // Get current master prompt per mode
+        let currentPrompt = await getMasterPrompt(env, mode);
+
+        // For child mode, inject parent data only when starting a new story
+        if (mode === 'child' && chatHistory.length === 1) {
+          const parentData = await getParentData(env);
+          if (parentData && parentData.block) {
+            currentPrompt = `${currentPrompt}\n\n<FROM_PARENT>\n${parentData.block}\n</FROM_PARENT>`;
+          }
+        }
         
         // Prepare messages for OpenAI
         const messages = [
@@ -220,32 +267,52 @@ export default {
         chatHistory.push({ role: 'assistant', content: response });
         
         // Save updated history
-        await saveChatHistory(chatHistory, env);
+        await saveChatHistory(chatHistory, env, chatKey);
         
-        return new Response(JSON.stringify({ 
+        const responsePayload = { 
           response, 
-          chatHistory: chatHistory.slice(-20) // Return last 20 messages
-        }), {
+          chatHistory: chatHistory.slice(-20)
+        };
+
+        // If parent mode, try to capture a <PARENT_INPUT> block from either user or assistant
+        if (mode === 'parent') {
+          const regex = /<PARENT_INPUT>[\s\S]*?<\/PARENT_INPUT>/i;
+          const fromUser = typeof validatedMessage === 'string' ? validatedMessage.match(regex) : null;
+          const fromAssistant = typeof response === 'string' ? response.match(regex) : null;
+          const match = fromUser?.[0] || fromAssistant?.[0] || null;
+          if (match) {
+            const saved = await saveParentData(match, env);
+            responsePayload.consumed = true;
+            responsePayload.parentData = saved;
+          }
+        }
+
+        return new Response(JSON.stringify(responsePayload), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
         
       } else if (url.pathname === '/api/history' && request.method === 'GET') {
-        const chatHistory = await getChatHistory(env);
+        const mode = url.searchParams.get('mode') === 'parent' ? 'parent' : 'child';
+        const chatKey = mode === 'parent' ? 'chat:parents' : 'chat:child';
+        const chatHistory = await getChatHistory(env, chatKey);
         
         return new Response(JSON.stringify(chatHistory.slice(-20)), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
         
       } else if (url.pathname === '/api/history' && request.method === 'DELETE') {
-        await env.CHAT_HISTORY.delete(CHAT_KEY);
+        const mode = url.searchParams.get('mode') === 'parent' ? 'parent' : 'child';
+        const chatKey = mode === 'parent' ? 'chat:parents' : 'chat:child';
+        await env.CHAT_HISTORY.delete(chatKey);
         
         return new Response(JSON.stringify({ message: 'Chat history cleared' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
         
       } else if (url.pathname === '/api/prompt' && request.method === 'GET') {
-        // Get current master prompt
-        const currentPrompt = await getMasterPrompt(env);
+        // Get current master prompt per mode
+        const mode = url.searchParams.get('mode') === 'parent' ? 'parent' : 'child';
+        const currentPrompt = await getMasterPrompt(env, mode);
         
         return new Response(JSON.stringify({ 
           prompt: currentPrompt
@@ -254,7 +321,8 @@ export default {
         });
         
       } else if (url.pathname === '/api/prompt' && request.method === 'PUT') {
-        // Update master prompt
+        // Update master prompt per mode
+        const mode = url.searchParams.get('mode') === 'parent' ? 'parent' : 'child';
         const { prompt } = await request.json();
         
         if (!prompt || typeof prompt !== 'string') {
@@ -265,7 +333,7 @@ export default {
           throw new Error('Prompt too long. Please keep it under 10,000 characters.');
         }
         
-        const success = await saveMasterPrompt(prompt.trim(), env);
+        const success = await saveMasterPrompt(prompt.trim(), env, mode);
         
         if (!success) {
           throw new Error('Failed to save prompt');
@@ -279,8 +347,9 @@ export default {
         });
         
       } else if (url.pathname === '/api/prompt' && request.method === 'DELETE') {
-        // Delete master prompt
-        const success = await deleteMasterPrompt(env);
+        // Delete master prompt per mode
+        const mode = url.searchParams.get('mode') === 'parent' ? 'parent' : 'child';
+        const success = await deleteMasterPrompt(env, mode);
         
         if (!success) {
           throw new Error('Failed to delete prompt');
@@ -291,7 +360,16 @@ export default {
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
-        
+      } else if (url.pathname === '/api/parent-data' && request.method === 'GET') {
+        const parentData = await getParentData(env);
+        return new Response(JSON.stringify(parentData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else if (url.pathname === '/api/parent-data' && request.method === 'DELETE') {
+        await deleteParentData(env);
+        return new Response(JSON.stringify({ message: 'Parent data cleared' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       } else {
         // Handle static assets and React Router client-side routing
         // For any non-API route, serve the React app (index.html)
