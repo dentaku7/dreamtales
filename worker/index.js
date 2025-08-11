@@ -208,7 +208,67 @@ export default {
     }
 
     try {
-      if (url.pathname === '/api/chat' && request.method === 'POST') {
+      if (url.pathname === '/api/story/start' && request.method === 'POST') {
+        const mode = url.searchParams.get('mode') === 'parent' ? 'parent' : 'child';
+
+        // Clear history
+        const chatKey = mode === 'parent' ? 'chat:parents' : 'chat:child';
+        await env.CHAT_HISTORY.delete(chatKey);
+        const chatHistory = [];
+
+        // Compose prompt with optional parent injection for child
+        let currentPrompt = await getMasterPrompt(env, mode);
+        let appliedFromParent = false;
+        if (mode === 'child') {
+          const parentData = await getParentData(env);
+          if (parentData && parentData.block) {
+            currentPrompt = `${currentPrompt}\n\n<FROM_PARENT>\n${parentData.block}\n</FROM_PARENT>`;
+            appliedFromParent = true;
+          }
+        }
+
+        const starterMessage = mode === 'parent'
+          ? 'Hello, I want help describing my parenting situation and desired outcome.'
+          : "Hello! I'd like to hear a bedtime story.";
+
+        const messages = [
+          { role: 'system', content: currentPrompt },
+          { role: 'user', content: starterMessage },
+        ];
+
+        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages,
+            max_tokens: 2000,
+            temperature: 0.7,
+          }),
+        });
+
+        if (!openaiResponse.ok) {
+          const errorData = await openaiResponse.text();
+          console.error('OpenAI API Error:', errorData);
+          throw new Error('Failed to get response from AI service');
+        }
+
+        const completion = await openaiResponse.json();
+        const assistantReply = completion.choices[0].message.content;
+
+        // Persist history
+        chatHistory.push({ role: 'user', content: starterMessage });
+        chatHistory.push({ role: 'assistant', content: assistantReply });
+        await saveChatHistory(chatHistory, env, chatKey);
+
+        return new Response(JSON.stringify({ chatHistory: chatHistory.slice(-20), appliedFromParent }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+
+      } else if (url.pathname === '/api/chat' && request.method === 'POST') {
         const { message } = await request.json();
         const mode = url.searchParams.get('mode') === 'parent' ? 'parent' : 'child';
         

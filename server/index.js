@@ -89,6 +89,51 @@ function setHistoryByMode(mode = 'child', newHistoryArray) {
 }
 
 // API Routes with /api prefix
+// Start a new story (clears history, applies parent injection for child, creates initial assistant turn)
+app.post('/api/story/start', async (req, res) => {
+  try {
+    const mode = (req.query.mode === 'parent') ? 'parent' : 'child';
+    // Clear history
+    setHistoryByMode(mode, []);
+    const history = getHistoryByMode(mode);
+
+    // Compose prompt (inject parent block for child)
+    let currentPrompt = await getCurrentMasterPrompt(mode);
+    let appliedFromParent = false;
+    if (mode === 'child' && parentDataBlock && parentDataBlock.block) {
+      currentPrompt = `${currentPrompt}\n\n<FROM_PARENT>\n${parentDataBlock.block}\n</FROM_PARENT>`;
+      appliedFromParent = true;
+    }
+
+    // Seed conversation with a starter user message to elicit assistant welcome
+    const starterMessage = mode === 'parent'
+      ? 'Hello, I want help describing my parenting situation and desired outcome.'
+      : "Hello! I'd like to hear a bedtime story.";
+
+    const messages = [
+      { role: 'system', content: currentPrompt },
+      { role: 'user', content: starterMessage }
+    ];
+
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages,
+    });
+
+    const assistantReply = completion.choices[0].message.content;
+
+    // Persist history (user + assistant)
+    history.push({ role: 'user', content: starterMessage });
+    history.push({ role: 'assistant', content: assistantReply });
+    setHistoryByMode(mode, history);
+
+    return res.json({ chatHistory: history, appliedFromParent });
+  } catch (error) {
+    console.error('Error starting new story:', error);
+    res.status(500).json({ error: 'Failed to start new story' });
+  }
+});
+
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;

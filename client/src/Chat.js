@@ -163,32 +163,23 @@ function Chat({ mode = 'child' }) {
     inputRef.current?.focus();
   }, []);
 
-  // Send initial welcome message
-  const sendWelcomeMessage = useCallback(async () => {
+  // Start a new story explicitly (no auto welcome)
+  const startNewStory = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/chat?mode=${mode}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: "Hello! I'd like to hear a bedtime story." }),
-      });
-
+      const response = await fetch(`${API_BASE}/api/story/start?mode=${mode}`, { method: 'POST' });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
       setMessages(data.chatHistory);
       setIsConnected(true);
     } catch (error) {
-      console.error('Error sending welcome message:', error);
-      setError('Welcome message failed. You can still start typing to begin.');
+      console.error('Error starting story:', error);
+      setError('Failed to start story.');
       setIsConnected(false);
     } finally {
       setIsLoading(false);
@@ -207,8 +198,8 @@ function Chat({ mode = 'child' }) {
         const data = await response.json();
         
         if (data.length === 0) {
-          // No existing chat history, send welcome message
-          await sendWelcomeMessage();
+          // No existing chat history; show empty state with Start button
+          setMessages([]);
         } else {
           setMessages(data);
         }
@@ -225,7 +216,7 @@ function Chat({ mode = 'child' }) {
     if (!hasInitialized) {
       fetchHistory();
     }
-  }, [hasInitialized, sendWelcomeMessage, mode]);
+  }, [hasInitialized, mode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -302,7 +293,7 @@ function Chat({ mode = 'child' }) {
       setError(null);
       setIsConnected(true);
       setHasInitialized(false);
-      await sendWelcomeMessage();
+      await startNewStory();
       
     } catch (error) {
       console.error('Error starting new story:', error);
@@ -396,7 +387,8 @@ function Chat({ mode = 'child' }) {
             <div className="text-center py-10 text-gray-600">
               <div>
                 <h2 className="text-xl text-gray-800 mb-4">Welcome to DreamTales! 🌙</h2>
-                <p className="mb-4 leading-relaxed">Something went wrong with the welcome message. Please type "Hello" to get started!</p>
+                <p className="mb-4 leading-relaxed">Start a new conversation to begin.</p>
+                <button onClick={startNewStory} className="btn-primary">Start</button>
               </div>
             </div>
           )}
